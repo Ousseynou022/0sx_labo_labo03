@@ -19,22 +19,28 @@ typedef enum {
 Tasks currentTask = TASK_OFF;
 
 byte chiffre96[8] = {
-  0b11100,  
-  0b11100,  
-  0b00100,  
-  0b11111,  
-  0b00100,  
-  0b00100, 
-  0b00111,  
-  0b00111,  
+  0b11100,
+  0b11100,
+  0b00100,
+  0b11111,
+  0b00100,
+  0b00100,
+  0b00111,
+  0b00111,
 };
 
-int temperature = 0;  
-int vitesse = 0;      
-int direction = 0;    
-int etat = 0;         
-bool etatClim = false;   
+int temperature = 0;
+int vitesse = 0;
+int direction = 0;
+int etat = 0;
+bool etatClim = false;
 unsigned long lastTime = 0;
+int Vo;            // Voltage à la sortie
+float R1 = 10000;  // Résistance
+float logR2, R2, T, Tc, Tf;
+
+// Les coefficients A, B et C.
+float c1 = 1.129148e-03, c2 = 2.34125e-04, c3 = 8.76741e-08;
 
 // void afficherMessageDemarrage() {
 //   lcd.clear();
@@ -57,7 +63,6 @@ void clic() {
     lcd.clear();
     currentTask = TASK_OFF;
   }
- 
 }
 
 void setup() {
@@ -80,19 +85,24 @@ void setup() {
 
 void lireCapteurs() {
   int valeurCapteur = analogRead(PIN_CAPTEUR_TEMP);
-  int temp = map(valeurCapteur, 0, 1023, 0, 50);
+  //int temp = map(valeurCapteur, 0, 1023, 0, 50);
+  R2 = R1 * (1023.0 / (float)valeurCapteur - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2 * logR2 + c3 * logR2 * logR2 * logR2));
+  Tc = T - 273.15;
+
   lcd.setCursor(0, 0);
   lcd.print("temp:");
-  lcd.print(temp);
+  lcd.print(Tc);
   lcd.print("C");
   int currentTime = millis();
-  if (temp > 25) {
+  if (Tc > 25) {
     etatClim = true;
     digitalWrite(PIN_LED, HIGH);
     lcd.setCursor(0, 1);
     lcd.print("clim : ON ");
 
-  } else if (temp < 24) {
+  } else if (Tc < 24) {
 
     etatClim = false;
     digitalWrite(PIN_LED, LOW);
@@ -104,7 +114,9 @@ void lireCapteurs() {
 void afficherVitesseEtDirection() {
   int joystickX = analogRead(PIN_JOYSTICK_X);
   int joystickY = analogRead(PIN_JOYSTICK_Y);
-  int vitesse = map(joystickX, 0, 1023, -120, 120);
+ 
+  int vitesse = (joystickX > 512) ? map(joystickX, 512, 1023, 0, 120) : map(joystickX, 0, 511, -25, 0);
+
   int direction = map(joystickY, 0, 1023, 90, -90);
 
   if (vitesse > 0) {
@@ -155,18 +167,17 @@ void envoyerDonneesSerie() {
 void loop() {
   bouton.tick();
   unsigned long currentTime = millis();
-    if (currentTime - lastTime >= 100) {
-        lastTime = currentTime;
-        envoyerDonneesSerie();
-      }
+  if (currentTime - lastTime >= 100) {
+    lastTime = currentTime;
+    envoyerDonneesSerie();
+  }
 
   switch (currentTask) {
-    case TASK_OFF:  
-      changement01();
+    case TASK_OFF:
+      changement02();
       break;
     case TASK_ON:
-      changement02();
+      changement01();
       break;
   }
 }
-
