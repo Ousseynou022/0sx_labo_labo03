@@ -8,16 +8,10 @@
 #define PIN_JOYSTICK_X A1
 #define PIN_JOYSTICK_Y A2
 #define PIN_LED 8
-bool etatClim = false;
-
-
-
 
 //LiquidCrystal_I2C lcd(0x27, 16, 2);
 LCD_I2C lcd(0x27, 16, 2);
-
 OneButton bouton(BTN_PIN, true, true);
-
 typedef enum {
   TASK_OFF,
   TASK_ON,
@@ -39,7 +33,7 @@ int temperature = 0;
 int vitesse = 0;      
 int direction = 0;    
 int etat = 0;         
-bool pageUn = true;   
+bool etatClim = false;   
 unsigned long lastTime = 0;
 
 // void afficherMessageDemarrage() {
@@ -82,24 +76,6 @@ void setup() {
   lcd.print("96");
   delay(3000);
   lcd.clear();
-}
-
-void loop() {
-  bouton.tick();
-  unsigned long currentTime = millis();
-    if (currentTime - lastTime >= 100) {
-        lastTime = currentTime;
-        envoyerDonneesSerie();
-      }
-
-  switch (currentTask) {
-    case TASK_OFF:  
-      changement01();
-      break;
-    case TASK_ON:
-      changement02();
-      break;
-  }
 }
 
 void lireCapteurs() {
@@ -175,3 +151,22 @@ void envoyerDonneesSerie() {
   Serial.print(",sys:");
   Serial.println(etatClim ? 1 : 0);
 }
+
+void loop() {
+  bouton.tick();
+  unsigned long currentTime = millis();
+    if (currentTime - lastTime >= 100) {
+        lastTime = currentTime;
+        envoyerDonneesSerie();
+      }
+
+  switch (currentTask) {
+    case TASK_OFF:  
+      changement01();
+      break;
+    case TASK_ON:
+      changement02();
+      break;
+  }
+}
+
